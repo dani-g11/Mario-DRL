@@ -1,0 +1,25 @@
+
+context.md
+mensaje_equipo.txt
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Entornos virtuales
+.venv/
+venv/
+
+# Resultados de entrenamiento (Persona 4 puede ajustar)
+runs/
+logs/
+models/
+*.zip
+
+# Editor / SO
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
