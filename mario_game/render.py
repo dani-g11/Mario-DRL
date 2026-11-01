@@ -32,9 +32,7 @@ HUD_HEIGHT = 38                         # franja superior que ocupa el HUD
 
 def draw(surface, game, hud: bool = True) -> None:
     """Dibuja la vista actual de `game` (desde `game.cam_x`) en `surface`."""
-    if surface.get_size() != (SCREEN_W, SCREEN_H):
-        raise ValueError(f"la superficie debe medir {SCREEN_W}×{SCREEN_H}, "
-                         f"mide {surface.get_width()}×{surface.get_height()}")
+    _require_screen_size(surface)
     level = game.level
     cam = int(game.cam_x)
     surface.fill(sprites.SKY_COLOR)
@@ -47,6 +45,12 @@ def draw(surface, game, hud: bool = True) -> None:
     _draw_mario(surface, game, cam)
     if hud:
         _draw_hud(surface, game)
+
+
+def _require_screen_size(surface) -> None:
+    if surface.get_size() != (SCREEN_W, SCREEN_H):
+        raise ValueError(f"la superficie debe medir {SCREEN_W}×{SCREEN_H}, "
+                         f"mide {surface.get_width()}×{surface.get_height()}")
 
 
 # --- Escenario ------------------------------------------------------------------
@@ -242,3 +246,24 @@ def _draw_hud(surface, game) -> None:
     pygame.draw.rect(surface, BLACK, bar.inflate(2, 2))
     pygame.draw.rect(surface, (64, 64, 64), bar)
     pygame.draw.rect(surface, (88, 216, 84), (bar.x, bar.y, int(bar.w * game.progress), bar.h))
+
+
+# --- Carteles (pausa, fin de partida) ----------------------------------------------
+
+def draw_banner(surface, title: str, lines=(), color: tuple = WHITE) -> None:
+    """Cartel centrado sobre la imagen ya dibujada: `title` grande y `lines` debajo.
+
+    Oscurece el fondo para que el texto se lea. Lo usa play.py en la pausa y al
+    terminar la partida; el entorno de entrenamiento no lo necesita. La fuente solo
+    tiene A-Z, 0-9, % - : y el espacio (sin tildes): cualquier otro carácter sale en blanco.
+    """
+    _require_screen_size(surface)
+    shade = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+    shade.fill((0, 0, 0, 120))
+    surface.blit(shade, (0, 0))
+    rows = [_text_surface(title, color, 3)] + [_text_surface(line, WHITE, 2) for line in lines]
+    gap = 8
+    y = (SCREEN_H - sum(img.get_height() for img in rows) - gap * (len(rows) - 1)) // 2
+    for img in rows:
+        surface.blit(img, ((SCREEN_W - img.get_width()) // 2, y))
+        y += img.get_height() + gap
