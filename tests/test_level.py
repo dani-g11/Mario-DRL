@@ -14,10 +14,10 @@ from mario_game.constants import (MAX_PIT_TILES, MIN_JUMP_TILES, ROWS, T_BRICK,
                                   T_EMPTY, T_GROUND, T_HARD, T_PIPE,
                                   T_QUESTION, T_USED, TILE)
 from mario_game.game import MarioGame
-from mario_game.level import (Level, build_level_1, join_tramos,
+from mario_game.level import (Level, build_level_1, build_level_2, join_tramos,
                               tiles_from_ascii)
 
-LEVEL_BUILDERS = [build_level_1]
+LEVEL_BUILDERS = [build_level_1, build_level_2]
 
 # Nivel mínimo de 7 columnas (filas 9 a 14; por encima hay aire):
 #   col 0: suelo con un bloque ? flotante en la fila 9
@@ -296,3 +296,41 @@ def test_engine_accepts_every_checkpoint(level):
         for goomba in game.goombas:
             assert goomba.x // TILE > col + MarioGame.GOOMBA_SAFE_COLS
             assert not overlaps_solid(goomba, game.level)
+
+
+# --- P2.10: el nivel 2 es de verdad otro nivel -----------------------------------------
+
+def hazard_columns(level) -> set[int]:
+    """Columnas con un foso o con un escalón hacia arriba."""
+    rows = surfaces(level)
+    return {c for c in range(1, level.width)
+            if rows[c] is None or (rows[c - 1] is not None and rows[c] < rows[c - 1])}
+
+
+def test_build_level_2_returns_a_new_level_each_call():
+    a, b = build_level_2(), build_level_2()
+    assert isinstance(a, Level) and a is not b and a.tiles is not b.tiles
+    a.tiles[9][98] = T_USED                 # lo que hace el motor al golpear un bloque ?
+    assert b.tiles[9][98] == T_QUESTION
+    a.goomba_cols.clear()
+    assert b.goomba_cols
+
+
+def test_level_2_is_not_a_copy_of_level_1():
+    one, two = build_level_1(), build_level_2()
+    assert set(one.goomba_cols).isdisjoint(two.goomba_cols)
+    assert one.flag_col == two.flag_col      # misma longitud: el progreso se compara bien
+    shared = hazard_columns(one) & hazard_columns(two)
+    assert len(shared) <= len(hazard_columns(two)) // 2, \
+        f"el nivel 2 repite demasiados obstáculos del nivel 1: {sorted(shared)}"
+
+
+def test_level_2_has_a_plateau():
+    # En el nivel 1 todo el suelo está a la misma altura; en el 2 hay una meseta.
+    level = build_level_2()
+    top = ROWS - 4                                    # fila de la superficie de una meseta de 2
+    plateau = [c for c in range(level.width)
+               if level.surface_row(c) == top and level.tiles[top][c] == T_GROUND]
+    assert len(plateau) >= 10
+    assert any(c in plateau for c in level.checkpoints), "ningún checkpoint está sobre la meseta"
+    assert any(c in plateau for c in level.goomba_cols), "ningún goomba está sobre la meseta"
