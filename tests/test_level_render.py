@@ -273,3 +273,32 @@ def test_game_render_uses_this_module():
     direct = new_surface()
     render.draw(direct, game)
     assert pixels(surface) == pixels(direct)
+
+
+# --- Carteles (play.py) ------------------------------------------------------------------
+
+def test_banner_darkens_the_picture_and_writes_the_text():
+    game = MarioGame(build_level_1())
+    plain, banner = new_surface(), new_surface()
+    render.draw(plain, game)
+    render.draw(banner, game)
+    render.draw_banner(banner, "GAME OVER", ["R REINICIAR"], color=(252, 84, 84))
+    assert pixels(plain) != pixels(banner)
+    assert count_color(banner, (252, 84, 84)) > 50          # el título, en su color
+    assert count_color(banner, render.WHITE) > 50           # las líneas de debajo
+    # El cielo ya no tiene su color: todo el cuadro quedó oscurecido.
+    assert count_color(banner, sprites.SKY_COLOR) == 0
+
+
+def test_banner_is_centred_and_ignores_unknown_characters():
+    surface = new_surface()
+    surface.fill((200, 200, 200))
+    render.draw_banner(surface, "PAUSA", ["Ñ"])             # la Ñ sale como un espacio
+    columns = [x for x in range(SCREEN_W)
+               if count_color(surface.subsurface((x, 0, 1, SCREEN_H)), render.WHITE) > 0]
+    assert abs((min(columns) + max(columns)) / 2 - SCREEN_W / 2) <= 4
+
+
+def test_banner_rejects_a_surface_of_the_wrong_size():
+    with pytest.raises(ValueError, match=f"{SCREEN_W}"):
+        render.draw_banner(pygame.Surface((100, 100)), "PAUSA")
