@@ -219,3 +219,16 @@ def test_levels_stay_passable_with_slower_and_faster_goombas(builder, speed):
     # depender de un valor exacto.
     results = validate.validate_level(builder, goomba_speeds=(speed,))
     assert validate.all_passed(results), [(r.start_col, r.outcome) for r in results if not r.won]
+
+
+class GoombaBlindBot(validate.Bot):
+    """Un bot que no ve los goombas: sirve para comprobar que estorban."""
+    GOOMBA_LOOKAHEAD = 0
+
+
+@pytest.mark.parametrize("builder", LEVEL_BUILDERS, ids=lambda f: f.__name__)
+def test_the_goombas_of_every_level_are_on_the_way(builder):
+    # Si el bot pasa el nivel porque los goombas nunca le tocan, la validación no
+    # prueba nada de ellos: sin saltarlos, el bot debe morir contra uno.
+    result = validate.play(builder, builder().start_col, bot=GoombaBlindBot())
+    assert not result.won and result.death_reason == "goomba"
