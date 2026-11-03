@@ -1,6 +1,7 @@
 """Modo humano de Mario DRL (Persona 2, P2.8): juega el nivel con el teclado.
 
     python play.py                  # nivel 1
+    python play.py --level 2        # el nivel 2 (el de generalización)
     python play.py --scale 2        # ventana más pequeña (por defecto se elige sola)
     python play.py --start-col 94   # empezar en una columna concreta, para probar un tramo
 
@@ -24,10 +25,10 @@ import pygame
 
 from mario_game.constants import FPS, GOOMBA_SPEED, SCREEN_H, SCREEN_W
 from mario_game.game import MarioGame
-from mario_game.level import build_level_1
+from mario_game.level import build_level_1, build_level_2
 from mario_game.render import draw_banner
 
-LEVELS = {1: build_level_1}                 # número de nivel -> función que lo construye
+LEVELS = {1: build_level_1, 2: build_level_2}      # número de nivel -> función que lo construye
 CONTROLS = "Controles:" + __doc__.split("Controles:")[1].split("El juego")[0].rstrip()
 
 DEFAULT_SCALE = 3                           # 768×720: cabe en una pantalla de 1080 px
