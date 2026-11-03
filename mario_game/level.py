@@ -207,9 +207,89 @@ def build_level_1() -> Level:
     )
 
 
+# --- Nivel 2 ------------------------------------------------------------------
+# Mide la generalización (P2.10): mismas piezas y mismos límites del contrato que el
+# nivel 1 (foso <= 3, obstáculo <= 4), pero en otro orden, otros sitios y otro ritmo,
+# para que un agente que memorizó el nivel 1 no pueda pasarlo. Lo nuevo:
+#   - un foso de 3 (el máximo) a 12 columnas del inicio, antes de cualquier tubería;
+#   - una meseta de 2 de alto con un goomba encima (en el nivel 1 todo el suelo es llano);
+#   - una colina de 3 de alto en vez de la pirámide de 4, y una tubería de 3 en otro tramo;
+#   - bloques ? en el tramo 2 (en el nivel 1 están al principio), en una sola fila de 3.
+# Los tramos de 40 columnas contienen:
+#   0: foso de 3.   1: tubería de 2 y entrada a la meseta.   2: meseta con goomba, bloques ?
+#   y foso de 3.   3: tubería de 3.   4: colina de 3, tubería de 1 y la bandera.
+# La meseta (cols 72-95) cruza el límite entre los tramos 1 y 2.
+
+TRAMOS_NIVEL_2 = [
+    # tramo 0 (cols 0-39)
+    [
+        "##############...#######################",
+        "##############...#######################",
+    ],
+    # tramo 1 (cols 40-79)
+    [
+        "................PP..............########",
+        "................PP..............########",
+        "########################################",
+        "########################################",
+    ],
+    # tramo 2 (cols 80-119)
+    [
+        "..................?B?...................",
+        "........................................",
+        "################........................",
+        "################........................",
+        "##########################...###########",
+        "##########################...###########",
+    ],
+    # tramo 3 (cols 120-159)
+    [
+        "......................PP................",
+        "......................PP................",
+        "......................PP................",
+        "########################################",
+        "########################################",
+    ],
+    # tramo 4 (cols 160-199)
+    [
+        "........HH..............................",
+        ".......HHHH.............................",
+        "......HHHHHH......PP....................",
+        "########################################",
+        "########################################",
+    ],
+]
+
+LEVEL_2_START_COL = 2
+LEVEL_2_FLAG_COL = 186
+# Mismas reglas que en el nivel 1: suelo llano de 6 columnas a la izquierda a 8 a la
+# derecha de cada goomba (el del 84 está sobre la meseta) y al menos 10 columnas entre
+# dos goombas. Cada uno queda a más de 10 columnas del aterrizaje del salto anterior.
+LEVEL_2_GOOMBA_COLS = [38, 84, 124, 156]
+# El checkpoint 76 está sobre la meseta (suelo a 2 tiles de altura).
+LEVEL_2_CHECKPOINTS = [2, 19, 44, 62, 76, 98, 112, 134, 148, 160, 172]
+
+
+def build_level_2() -> Level:
+    """Nivel 2. Devuelve un `Level` nuevo en cada llamada (INTERFACES.md §3)."""
+    return Level(
+        tiles=tiles_from_ascii(join_tramos(TRAMOS_NIVEL_2)),
+        goomba_cols=LEVEL_2_GOOMBA_COLS,
+        start_col=LEVEL_2_START_COL,
+        flag_col=LEVEL_2_FLAG_COL,
+        checkpoints=LEVEL_2_CHECKPOINTS,
+    )
+
+
 if __name__ == "__main__":
-    level = build_level_1()
-    print(f"Nivel 1: {level.width} columnas, {len(level.goomba_cols)} goombas, "
+    import sys
+
+    builders = {1: build_level_1, 2: build_level_2}
+    number = int(sys.argv[1]) if len(sys.argv) > 1 else 1
+    if number not in builders:
+        sys.exit(f"el nivel {number} no existe (hay: {sorted(builders)})")
+    level = builders[number]()
+    print(f"Nivel {number}: {level.width} columnas, {len(level.goomba_cols)} goombas, "
           f"bandera en la columna {level.flag_col}")
     for first in range(0, level.width, TRAMO_ANCHO):
         last = min(first + TRAMO_ANCHO, level.width) - 1

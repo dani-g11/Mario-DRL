@@ -301,3 +301,11 @@ def test_main_rejects_bad_arguments_with_a_message(args, capsys):
         play.main(args + ["--frames", "1"])
     assert exc.value.code == 2
     assert "error" in capsys.readouterr().err
+
+
+def test_level_2_can_be_played():
+    session = play.Session(level_number=2)
+    assert session.game.level.goomba_cols == [38, 84, 124, 156]
+    session.handle_key(pygame.K_5)                    # el checkpoint 5 (sobre la meseta)
+    assert int(session.game.mario.x) // TILE == session.game.level.checkpoints[4]
+    assert play.main(["--level", "2", "--frames", "5", "--scale", "1"]) == 0

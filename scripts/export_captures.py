@@ -3,6 +3,7 @@
 Genera, en la carpeta de salida:
   sprites.png         todos los sprites ampliados (P2.5)
   nivel1_tramoN.png   cada tramo del nivel 1, tal como lo dibuja el render (P2.6)
+  nivel2_tramoN.png   lo mismo para el nivel 2 (P2.10)
   entidades.png       Mario, goombas y HUD: el inicio de una partida y un estado
                       ficticio con Mario saltando y un goomba aplastado (P2.7)
 
@@ -21,7 +22,7 @@ import pygame  # noqa: E402
 from mario_game import sprites  # noqa: E402
 from mario_game.constants import FPS, SCREEN_H, SCREEN_W, TILE  # noqa: E402
 from mario_game.game import Goomba, MarioGame  # noqa: E402
-from mario_game.level import TRAMO_ANCHO, build_level_1  # noqa: E402
+from mario_game.level import TRAMO_ANCHO, build_level_1, build_level_2  # noqa: E402
 from mario_game.render import GROUND_Y, draw  # noqa: E402
 
 SCALE = 2
@@ -70,11 +71,13 @@ def main(out_dir):
     print(f"Guardando en {out_dir}:")
     save(sprites.build_sheet(scale=4), os.path.join(out_dir, "sprites.png"), scale=1)
 
-    level_game = MarioGame(build_level_1())
-    width_px = level_game.level.width * TILE
-    for n, start in enumerate(range(0, width_px, TRAMO_ANCHO * TILE)):
-        end = min(start + TRAMO_ANCHO * TILE, width_px)
-        save(render_strip(level_game, start, end), os.path.join(out_dir, f"nivel1_tramo{n}.png"))
+    for number, build in ((1, build_level_1), (2, build_level_2)):
+        level_game = MarioGame(build())
+        width_px = level_game.level.width * TILE
+        for n, start in enumerate(range(0, width_px, TRAMO_ANCHO * TILE)):
+            end = min(start + TRAMO_ANCHO * TILE, width_px)
+            save(render_strip(level_game, start, end),
+                 os.path.join(out_dir, f"nivel{number}_tramo{n}.png"))
 
     scenes = pygame.Surface((SCREEN_W * 2 + 8, SCREEN_H))
     scenes.fill((0, 0, 0))
