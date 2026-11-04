@@ -1,4 +1,6 @@
 # Python 3.12 (acordado por el equipo). Versiones fijadas.
-# P3 y P4 añadirán gymnasium, stable-baselines3 y torch.
+# gymnasium y numpy: entorno de P3. P4 añadirá stable-baselines3 y torch.
 pygame==2.6.1
 pytest==9.2.0
+gymnasium==1.4.0
+numpy==2.5.4
