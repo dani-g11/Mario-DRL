@@ -26,6 +26,15 @@ con estas partes en este orden:
 Observación `pixels` (P3.4): la vista del juego sin HUD, reducida a
 PIXELS_SIZE × PIXELS_SIZE y en grises, uint8 de forma (84, 84, 1). El apilado
 de frames lo hace quien entrena (VecFrameStack, P4).
+
+Recompensa y fin de episodio (P3.5, valores del plan de trabajo):
+
+    recompensa  Δmario.x / 10 − 0.01 por paso; −15 al morir; +50 en la bandera.
+                El avance es Δmario.x (no Δmax_x): retroceder resta, y la suma de
+                un episodio es la distancia neta recorrida / 10.
+    terminated  Mario muere (foso, goomba o tiempo) o toca la bandera.
+    truncated   sin terminar, `stuck_steps` pasos seguidos sin superar en más de
+                1 px el mejor x del episodio, o `max_steps` pasos en total.
 """
 
 import gymnasium as gym
@@ -49,6 +58,15 @@ ACTION_NAMES = ["NOOP", "RIGHT", "RIGHT+JUMP", "RIGHT+RUN", "RIGHT+RUN+JUMP",
                 "JUMP", "LEFT"]
 
 OBS_TYPES = ("grid", "pixels")
+
+# --- Recompensa y fin de episodio (P3.5) -------------------------------------
+PROGRESS_REWARD_DIV = 10.0     # avance en x / 10
+STEP_PENALTY = 0.01            # por paso, para que no le salga gratis quedarse quieto
+DEATH_PENALTY = 15.0
+FLAG_REWARD = 50.0
+STUCK_STEPS = 150              # pasos sin avanzar antes de truncar
+MAX_STEPS = 3000               # 12 000 frames (200 s): se trunca antes del límite de tiempo
+PROGRESS_MIN_PX = 1.0          # cuánto hay que superar el mejor x para contar como avance
 
 # --- Observación pixels ------------------------------------------------------
 PIXELS_SIZE = 84
@@ -88,6 +106,7 @@ class MarioEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": FPS}
 
     def __init__(self, game_factory=None, obs_type="grid", frame_skip=4,
+                 stuck_steps=STUCK_STEPS, max_steps=MAX_STEPS,
                  render_mode=None, render_scale=3):
         super().__init__()
         if obs_type not in OBS_TYPES:
@@ -97,6 +116,8 @@ class MarioEnv(gym.Env):
                              f"(hay: {self.metadata['render_modes']})")
         self.obs_type = obs_type
         self.frame_skip = frame_skip
+        self.stuck_steps = stuck_steps
+        self.max_steps = max_steps
         self.render_mode = render_mode
         self.render_scale = render_scale
         self._game_factory = game_factory if game_factory is not None else _default_factory
@@ -109,6 +130,7 @@ class MarioEnv(gym.Env):
             self.observation_space = spaces.Box(0, 255, (PIXELS_SIZE, PIXELS_SIZE, 1),
                                                 np.uint8)
         self._build_solid_mask()
+        self._reset_counters()
         self._canvas = None              # Surface de SCREEN_W × SCREEN_H, se crea al usarla
         self._window = None              # ventana del modo "human"
         self._clock = None
@@ -117,20 +139,46 @@ class MarioEnv(gym.Env):
         super().reset(seed=seed)
         self.game.reset()
         self._build_solid_mask()
+        self._reset_counters()
         if self.render_mode == "human":
             self._render_human()
         return self._obs(), {}
 
     def step(self, action):
+        game = self.game
         left, right, jump, run = ACTIONS[int(action)]
+        prev_x = game.mario.x
         for _ in range(self.frame_skip):
-            self.game.step(left, right, jump, run)
+            game.step(left, right, jump, run)
             if self.render_mode == "human":
                 self._render_human()     # cada frame, para que se vea fluido
-            if self.game.dead or self.game.won:
+            if game.dead or game.won:
                 break
-        terminated = self.game.dead or self.game.won
-        return self._obs(), 0.0, terminated, False, {}
+
+        reward = (game.mario.x - prev_x) / PROGRESS_REWARD_DIV - STEP_PENALTY
+        if game.dead:
+            reward -= DEATH_PENALTY
+        if game.won:
+            reward += FLAG_REWARD
+
+        self._steps += 1
+        if game.mario.x > self._best_x + PROGRESS_MIN_PX:
+            self._best_x = game.mario.x
+            self._steps_without_progress = 0
+        else:
+            self._steps_without_progress += 1
+
+        terminated = bool(game.dead or game.won)
+        truncated = (not terminated) and (
+            self._steps_without_progress >= self.stuck_steps
+            or self._steps >= self.max_steps)
+        return self._obs(), float(reward), terminated, truncated, {}
+
+    def _reset_counters(self) -> None:
+        """Contadores del episodio para el truncado (P3.5)."""
+        self._steps = 0
+        self._steps_without_progress = 0
+        self._best_x = self.game.mario.x
 
     def render(self):
         """"rgb_array": el frame actual con HUD, (SCREEN_H, SCREEN_W, 3) uint8.
