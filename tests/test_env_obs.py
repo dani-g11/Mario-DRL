@@ -1,18 +1,19 @@
-"""Tests de la observación `grid` del entorno (P3.3).
+"""Tests de las observaciones del entorno: `grid` (P3.3) y `pixels` (P3.4).
 
 Usan el motor real (ya está en main) con niveles mínimos de tests/helpers.py,
-para comprobar que la rejilla refleja lo que hay de verdad alrededor de Mario.
+para comprobar que la observación refleja lo que hay de verdad alrededor de Mario.
 """
 
 import numpy as np
+import pygame
 import pytest
 from gymnasium.utils.env_checker import check_env
 
 from helpers import make_level
 from mario_env import (ENEMIES_OFFSET, ENEMY_FEATURES, GRID_CELLS,
-                       GRID_COLS, GRID_COLS_BEHIND, GRID_OBS_DIM, STATE_OFFSET,
-                       MarioEnv)
-from mario_game.constants import ROWS, SCREEN_W
+                       GRID_COLS, GRID_COLS_BEHIND, GRID_OBS_DIM, PIXELS_SIZE,
+                       STATE_OFFSET, MarioEnv)
+from mario_game.constants import ROWS, SCREEN_H, SCREEN_W
 from mario_game.game import MarioGame
 from mario_game.level import build_level_1
 from mario_stub import StubMarioGame
@@ -133,3 +134,77 @@ def test_check_env_con_motor_real_y_con_stub():
 def test_obs_type_desconocido():
     with pytest.raises(ValueError):
         MarioEnv(game_factory=StubMarioGame, obs_type="ram")
+
+
+# --- pixels (P3.4) -------------------------------------------------------------
+
+def pixels_env(**kwargs):
+    return MarioEnv(game_factory=lambda: MarioGame(build_level_1()),
+                    obs_type="pixels", **kwargs)
+
+
+def test_pixels_forma_y_tipo():
+    env = pixels_env()
+    obs, _ = env.reset()
+    assert obs.dtype == np.uint8
+    assert obs.shape == (PIXELS_SIZE, PIXELS_SIZE, 1) == (84, 84, 1)
+    assert env.observation_space.contains(obs)
+    assert obs.std() > 0                     # no es una imagen uniforme
+    obs, *_ = env.step(3)
+    assert env.observation_space.contains(obs)
+
+
+def test_pixels_cambia_cuando_mario_se_mueve():
+    env = pixels_env()
+    first, _ = env.reset()
+    obs = first
+    for _ in range(10):
+        obs, *_ = env.step(3)                # → + correr
+    assert not np.array_equal(first, obs)
+
+
+def test_pixels_funciona_con_el_stub():
+    env = MarioEnv(game_factory=StubMarioGame, obs_type="pixels")
+    obs, _ = env.reset()
+    assert obs.shape == (84, 84, 1) and obs.dtype == np.uint8
+
+
+def test_check_env_pixels():
+    check_env(pixels_env(), skip_render_check=True)
+    check_env(MarioEnv(game_factory=StubMarioGame, obs_type="pixels"),
+              skip_render_check=True)
+
+
+def test_render_rgb_array_con_hud():
+    env = pixels_env(render_mode="rgb_array")
+    env.reset()
+    frame = env.render()
+    assert frame.shape == (SCREEN_H, SCREEN_W, 3) and frame.dtype == np.uint8
+    # El HUD (arriba) se dibuja en el render, pero no en la observación pixels.
+    surface = pygame.Surface((SCREEN_W, SCREEN_H))
+    env.game.render(surface, hud=False)
+    sin_hud = np.transpose(pygame.surfarray.array3d(surface), (1, 0, 2))
+    assert not np.array_equal(frame[:40], sin_hud[:40])
+
+
+def test_render_mode_grid_rgb_array():
+    # render() también funciona con la observación grid.
+    env = MarioEnv(game_factory=StubMarioGame, render_mode="rgb_array")
+    env.reset()
+    assert env.render().shape == (SCREEN_H, SCREEN_W, 3)
+
+
+def test_render_human_sin_pantalla():
+    # Con SDL_VIDEODRIVER=dummy (tests/conftest.py) la ventana no se ve,
+    # pero el código de la ventana se ejecuta entero.
+    env = MarioEnv(game_factory=StubMarioGame, render_mode="human")
+    env.reset()
+    env.step(1)
+    assert env._window is not None
+    env.close()
+    assert env._window is None
+
+
+def test_render_mode_desconocido():
+    with pytest.raises(ValueError):
+        MarioEnv(game_factory=StubMarioGame, render_mode="ansi")
