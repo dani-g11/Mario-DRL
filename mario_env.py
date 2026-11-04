@@ -51,6 +51,8 @@ from gymnasium import spaces
 
 from mario_game.constants import (FPS, ROWS, RUN_MAX_SPEED, SCREEN_H, SCREEN_W,
                                   SOLID_TILES, TILE)
+from mario_game.game import MarioGame
+from mario_game.level import build_level_1
 
 # (left, right, jump, run): orden e índices de INTERFACES.md §7.
 ACTIONS = [
@@ -105,9 +107,14 @@ _SOLID_LUT[list(SOLID_TILES)] = 1.0
 
 
 def _default_factory():
-    """Fábrica por defecto. En P3.8 pasará al motor real."""
-    from mario_stub import StubMarioGame
-    return StubMarioGame()
+    """Fábrica por defecto (P3.8): el motor real con el nivel 1.
+
+    Crea un Level nuevo en cada llamada ("Un Level por MarioGame",
+    INTERFACES.md §4): el motor modifica los bloques ?, y con varios entornos
+    en paralelo cada uno necesita el suyo. El stub (mario_stub.StubMarioGame)
+    se queda para los tests: se pasa con game_factory=StubMarioGame.
+    """
+    return MarioGame(build_level_1())
 
 
 class MarioEnv(gym.Env):

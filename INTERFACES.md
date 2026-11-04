@@ -417,7 +417,9 @@ recompensa, y la suma de un episodio es la distancia neta recorrida / 10.
 `MarioEnv(game_factory=None, obs_type="grid", frame_skip=4, stuck_steps=150,
 max_steps=3000, random_start=False, random_start_prob=0.5, render_mode=None,
 render_scale=3)`, también a través de `gym.make("MarioPygame-v0", ...)` tras
-`import mario_env`. `render_mode` admite `"rgb_array"` (frame con HUD,
+`import mario_env`. Con `game_factory=None` el juego es `MarioGame(build_level_1())`,
+con un `Level` nuevo para cada entorno; los tests pasan
+`game_factory=StubMarioGame` (de `mario_stub.py`) cuando necesitan el stub. `render_mode` admite `"rgb_array"` (frame con HUD,
 `(240, 256, 3)` `uint8`) y `"human"`. La aleatoriedad y `level` llegan con P3.9
 y P3.10.
 
