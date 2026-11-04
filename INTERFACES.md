@@ -390,9 +390,9 @@ Diccionario `info` [PROFESOR: las claves; PROPUESTA: la procedencia]:
 | `death_reason` | `str \| None` | `game.death_reason` |
 
 Claves extra de `info` [PROPUESTA v0.5]: `score`, `coins`, `time_left` (del
-juego), `steps` (pasos del episodio) y `start_col` (columna de inicio del
-episodio). Las 5 del contrato están siempre; las extra pueden crecer sin romper
-nada.
+juego), `steps` (pasos del episodio), `start_col` (columna de inicio del
+episodio) y `goomba_speed` (velocidad de los goombas del episodio). Las 5 del
+contrato están siempre; las extra pueden crecer sin romper nada.
 
 ### Observación `grid` en detalle [PROPUESTA v0.5]
 
@@ -415,13 +415,27 @@ recompensa, y la suma de un episodio es la distancia neta recorrida / 10.
 ### Parámetros de `MarioEnv` [PROPUESTA v0.5]
 
 `MarioEnv(game_factory=None, obs_type="grid", frame_skip=4, stuck_steps=150,
-max_steps=3000, random_start=False, random_start_prob=0.5, render_mode=None,
-render_scale=3)`, también a través de `gym.make("MarioPygame-v0", ...)` tras
-`import mario_env`. Con `game_factory=None` el juego es `MarioGame(build_level_1())`,
-con un `Level` nuevo para cada entorno; los tests pasan
-`game_factory=StubMarioGame` (de `mario_stub.py`) cuando necesitan el stub. `render_mode` admite `"rgb_array"` (frame con HUD,
-`(240, 256, 3)` `uint8`) y `"human"`. La aleatoriedad y `level` llegan con P3.9
-y P3.10.
+max_steps=3000, random_start=False, random_start_prob=0.5, sticky_prob=0.0,
+goomba_speed_range=None, render_mode=None, render_scale=3)`, también a través
+de `gym.make("MarioPygame-v0", ...)` tras `import mario_env`.
+
+- Con `game_factory=None` el juego es `MarioGame(build_level_1())`, con un
+  `Level` nuevo para cada entorno. Los tests pasan `game_factory=StubMarioGame`
+  (de `mario_stub.py`) cuando necesitan el stub.
+- `render_mode` admite `"rgb_array"` (frame con HUD, `(240, 256, 3)` `uint8`) y
+  `"human"`.
+- El parámetro `level` llega con P3.10.
+
+### Aleatoriedad para robustez [PROPUESTA v0.5]
+
+Desactivada por defecto (el entrenamiento de P4.6 es sin aleatoriedad). Todo
+sale de `env.np_random`: misma semilla, mismo episodio; sin aleatoriedad, la
+semilla no cambia nada.
+
+| Parámetro | Efecto |
+|---|---|
+| `sticky_prob` | En `[0, 1)`. En cada frame, con esa probabilidad se repite la acción del frame anterior en vez de la elegida (como `repeat_action_probability` de Atari). Tras `reset()` la "anterior" es nada (0) |
+| `goomba_speed_range` | `(mín, máx)` con `0 < mín <= máx`. En cada `reset()` se sortea una velocidad uniforme en el rango y se escribe en `game.goomba_speed` antes de `game.reset()`. El validador de P2 probó los niveles con 0.3–1.5 |
 
 ### Inicio aleatorio [PROPUESTA v0.5]
 
@@ -466,4 +480,4 @@ Un stub de `MarioGame` cumple el contrato si:
 | 0.2 | 2026-10-27 | §4 `reset()`: `ValueError` si un goomba o `start_col` cae sobre un foso o fuera del nivel (cambio compatible) | P1 (pendiente P2, P3, P4) |
 | 0.3 | 2026-10-27 | §4: `render()` lanza `ImportError` claro si falta `render.py`; un `Level` por `MarioGame` (cambio compatible) | P1 (pendiente P2, P3, P4) |
 | 0.4 | 2026-10-27 | Revisión contra el plan: tabla "qué pide el plan y qué añadimos", `build_level_2()`, `Body.right/bottom`, texto del rebote entre goombas y del stub ajustados a la implementación (cambio compatible) | P1 (pendiente P2, P3, P4) |
-| 0.5 | 2026-11-03 | §7: forma de la observación `grid`, Δx en la recompensa, máximo de 3000 pasos, claves extra de `info`, parámetros de `MarioEnv` e inicio aleatorio (cambio compatible) | P3 (pendiente P1, P2, P4) |
+| 0.5 | 2026-11-03 | §7: forma de la observación `grid`, Δx en la recompensa, máximo de 3000 pasos, claves extra de `info`, parámetros de `MarioEnv`, inicio aleatorio y aleatoriedad para robustez (cambio compatible) | P3 (pendiente P1, P2, P4) |

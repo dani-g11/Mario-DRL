@@ -37,12 +37,20 @@ Recompensa y fin de episodio (P3.5, valores del plan de trabajo):
                 1 px el mejor x del episodio, o `max_steps` pasos en total.
 
 `info` (P3.6): x_pos, progress, flag_get, dead y death_reason (contrato), más
-score, coins, time_left, steps y start_col. El entorno se registra como
-"MarioPygame-v0".
+score, coins, time_left, steps, start_col y goomba_speed. El entorno se
+registra como "MarioPygame-v0".
 
 Inicio aleatorio (P3.7): con random_start=True, cada reset() empieza con
 probabilidad random_start_prob en un checkpoint del nivel elegido con
 self.np_random. options={"start_col": c} tiene prioridad.
+
+Aleatoriedad para robustez (P3.9), desactivada por defecto:
+    sticky_prob         en cada frame, con esta probabilidad se repite la acción
+                        del frame anterior (acciones pegajosas).
+    goomba_speed_range  (mín, máx): en cada reset() la velocidad de los goombas
+                        se sortea en ese rango. El validador de P2 probó el
+                        nivel con velocidades de 0.3 a 1.5.
+Todo sale de self.np_random: misma semilla, mismo episodio.
 """
 
 import gymnasium as gym
@@ -123,6 +131,7 @@ class MarioEnv(gym.Env):
     def __init__(self, game_factory=None, obs_type="grid", frame_skip=4,
                  stuck_steps=STUCK_STEPS, max_steps=MAX_STEPS,
                  random_start=False, random_start_prob=0.5,
+                 sticky_prob=0.0, goomba_speed_range=None,
                  render_mode=None, render_scale=3):
         super().__init__()
         if obs_type not in OBS_TYPES:
@@ -132,12 +141,23 @@ class MarioEnv(gym.Env):
                              f"(hay: {self.metadata['render_modes']})")
         if not 0.0 <= random_start_prob <= 1.0:
             raise ValueError(f"random_start_prob={random_start_prob} debe estar en [0, 1]")
+        if not 0.0 <= sticky_prob < 1.0:
+            # Con 1.0 se repetiría para siempre la primera acción (nada).
+            raise ValueError(f"sticky_prob={sticky_prob} debe estar en [0, 1)")
+        if goomba_speed_range is not None:
+            lo, hi = goomba_speed_range
+            if not 0.0 < lo <= hi:
+                raise ValueError(f"goomba_speed_range={goomba_speed_range}: "
+                                 "hace falta 0 < mínimo <= máximo")
+            goomba_speed_range = (float(lo), float(hi))
         self.obs_type = obs_type
         self.frame_skip = frame_skip
         self.stuck_steps = stuck_steps
         self.max_steps = max_steps
         self.random_start = random_start
         self.random_start_prob = random_start_prob
+        self.sticky_prob = sticky_prob
+        self.goomba_speed_range = goomba_speed_range
         self.render_mode = render_mode
         self.render_scale = render_scale
         self._game_factory = game_factory if game_factory is not None else _default_factory
@@ -165,9 +185,15 @@ class MarioEnv(gym.Env):
            nivel al azar, para practicar los tramos finales sin tener que
            llegar hasta ellos.
         3. Si no, level.start_col.
+
+        Con goomba_speed_range (P3.9), la velocidad de los goombas del episodio
+        se sortea aquí. Se escribe en game.goomba_speed ANTES de game.reset():
+        el contrato dice que se aplica en el siguiente reset().
         """
         super().reset(seed=seed)
         self._start_col = self._choose_start_col(options)
+        if self.goomba_speed_range is not None:
+            self.game.goomba_speed = float(self.np_random.uniform(*self.goomba_speed_range))
         self.game.reset(self._start_col)
         self._build_solid_mask()
         self._reset_counters()
@@ -189,10 +215,16 @@ class MarioEnv(gym.Env):
 
     def step(self, action):
         game = self.game
-        left, right, jump, run = ACTIONS[int(action)]
+        action = int(action)
         prev_x = game.mario.x
         for _ in range(self.frame_skip):
-            game.step(left, right, jump, run)
+            # Acciones pegajosas (P3.9), como repeat_action_probability de Atari:
+            # en cada frame, con probabilidad sticky_prob se repite la acción del
+            # frame anterior en vez de la elegida. Con sticky_prob=0 no se consume
+            # ningún número aleatorio, así el entorno sin aleatoriedad no cambia.
+            if self.sticky_prob == 0.0 or self.np_random.random() >= self.sticky_prob:
+                self._last_action = action
+            game.step(*ACTIONS[self._last_action])
             if self.render_mode == "human":
                 self._render_human()     # cada frame, para que se vea fluido
             if game.dead or game.won:
@@ -235,13 +267,15 @@ class MarioEnv(gym.Env):
             "time_left": int(game.time_left),
             "steps": self._steps,
             "start_col": self._start_col,
+            "goomba_speed": float(self.game.goomba_speed),
         }
 
     def _reset_counters(self) -> None:
-        """Contadores del episodio para el truncado (P3.5)."""
+        """Contadores del episodio: truncado (P3.5) y acción pegajosa (P3.9)."""
         self._steps = 0
         self._steps_without_progress = 0
         self._best_x = self.game.mario.x
+        self._last_action = 0            # el primer frame pegajoso repite "nada"
 
     def render(self):
         """"rgb_array": el frame actual con HUD, (SCREEN_H, SCREEN_W, 3) uint8.
