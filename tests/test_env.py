@@ -52,7 +52,7 @@ def test_frame_skip_se_corta_al_terminar():
 
 
 def test_acepta_acciones_numpy():
-    # Los agentes (Stable-Baselines3) pasan numpy.int64, no int.
+    # Los agentes (Stable-Baselines3) pasan numpy.int64
     env = MarioEnv(game_factory=StubMarioGame)
     env.reset()
     x0 = env.game.mario.x
