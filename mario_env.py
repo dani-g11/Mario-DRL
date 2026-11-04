@@ -37,7 +37,12 @@ Recompensa y fin de episodio (P3.5, valores del plan de trabajo):
                 1 px el mejor x del episodio, o `max_steps` pasos en total.
 
 `info` (P3.6): x_pos, progress, flag_get, dead y death_reason (contrato), más
-score, coins, time_left y steps. El entorno se registra como "MarioPygame-v0".
+score, coins, time_left, steps y start_col. El entorno se registra como
+"MarioPygame-v0".
+
+Inicio aleatorio (P3.7): con random_start=True, cada reset() empieza con
+probabilidad random_start_prob en un checkpoint del nivel elegido con
+self.np_random. options={"start_col": c} tiene prioridad.
 """
 
 import gymnasium as gym
@@ -110,6 +115,7 @@ class MarioEnv(gym.Env):
 
     def __init__(self, game_factory=None, obs_type="grid", frame_skip=4,
                  stuck_steps=STUCK_STEPS, max_steps=MAX_STEPS,
+                 random_start=False, random_start_prob=0.5,
                  render_mode=None, render_scale=3):
         super().__init__()
         if obs_type not in OBS_TYPES:
@@ -117,10 +123,14 @@ class MarioEnv(gym.Env):
         if render_mode is not None and render_mode not in self.metadata["render_modes"]:
             raise ValueError(f"render_mode={render_mode!r} no existe "
                              f"(hay: {self.metadata['render_modes']})")
+        if not 0.0 <= random_start_prob <= 1.0:
+            raise ValueError(f"random_start_prob={random_start_prob} debe estar en [0, 1]")
         self.obs_type = obs_type
         self.frame_skip = frame_skip
         self.stuck_steps = stuck_steps
         self.max_steps = max_steps
+        self.random_start = random_start
+        self.random_start_prob = random_start_prob
         self.render_mode = render_mode
         self.render_scale = render_scale
         self._game_factory = game_factory if game_factory is not None else _default_factory
@@ -132,6 +142,7 @@ class MarioEnv(gym.Env):
         else:
             self.observation_space = spaces.Box(0, 255, (PIXELS_SIZE, PIXELS_SIZE, 1),
                                                 np.uint8)
+        self._start_col = self.game.level.start_col
         self._build_solid_mask()
         self._reset_counters()
         self._canvas = None              # Surface de SCREEN_W × SCREEN_H, se crea al usarla
@@ -139,13 +150,35 @@ class MarioEnv(gym.Env):
         self._clock = None
 
     def reset(self, *, seed=None, options=None):
+        """Empieza un episodio.
+
+        Columna de inicio (P3.7), por orden de prioridad:
+        1. options={"start_col": c}: esa columna (evaluación y tests).
+        2. random_start: con probabilidad random_start_prob, un checkpoint del
+           nivel al azar, para practicar los tramos finales sin tener que
+           llegar hasta ellos.
+        3. Si no, level.start_col.
+        """
         super().reset(seed=seed)
-        self.game.reset()
+        self._start_col = self._choose_start_col(options)
+        self.game.reset(self._start_col)
         self._build_solid_mask()
         self._reset_counters()
         if self.render_mode == "human":
             self._render_human()
         return self._obs(), self._info()
+
+    def _choose_start_col(self, options) -> int:
+        level = self.game.level
+        if options and options.get("start_col") is not None:
+            return int(options["start_col"])
+        # Siempre self.np_random (nunca random ni np.random globales): así la
+        # misma semilla da el mismo inicio. Con random_start=False no se consume
+        # ningún número aleatorio.
+        if self.random_start and self.np_random.random() < self.random_start_prob:
+            # int(): choice devuelve numpy.int64; el motor y el info reciben un int.
+            return int(self.np_random.choice(level.checkpoints))
+        return level.start_col
 
     def step(self, action):
         game = self.game
@@ -194,6 +227,7 @@ class MarioEnv(gym.Env):
             "coins": int(game.coins),
             "time_left": int(game.time_left),
             "steps": self._steps,
+            "start_col": self._start_col,
         }
 
     def _reset_counters(self) -> None:
