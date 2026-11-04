@@ -37,8 +37,11 @@ Recompensa y fin de episodio (P3.5, valores del plan de trabajo):
                 1 px el mejor x del episodio, o `max_steps` pasos en total.
 
 `info` (P3.6): x_pos, progress, flag_get, dead y death_reason (contrato), más
-score, coins, time_left, steps, start_col y goomba_speed. El entorno se
+score, coins, time_left, steps, start_col, goomba_speed y level. El entorno se
 registra como "MarioPygame-v0".
+
+Varios niveles (P3.10): level=1 (por defecto) o level=2, o una función que
+devuelva un Level nuevo. Con game_factory, el juego lo decide la fábrica.
 
 Inicio aleatorio (P3.7): con random_start=True, cada reset() empieza con
 probabilidad random_start_prob en un checkpoint del nivel elegido con
@@ -60,7 +63,7 @@ from gymnasium import spaces
 from mario_game.constants import (FPS, ROWS, RUN_MAX_SPEED, SCREEN_H, SCREEN_W,
                                   SOLID_TILES, TILE)
 from mario_game.game import MarioGame
-from mario_game.level import build_level_1
+from mario_game.level import build_level_1, build_level_2
 
 # (left, right, jump, run): orden e índices de INTERFACES.md §7.
 ACTIONS = [
@@ -114,21 +117,25 @@ _SOLID_LUT = np.zeros(256, dtype=np.float32)
 _SOLID_LUT[list(SOLID_TILES)] = 1.0
 
 
-def _default_factory():
-    """Fábrica por defecto (P3.8): el motor real con el nivel 1.
+# Niveles disponibles por número (P3.10). El 2 mide la generalización (P4.8).
+LEVEL_BUILDERS = {1: build_level_1, 2: build_level_2}
 
-    Crea un Level nuevo en cada llamada ("Un Level por MarioGame",
-    INTERFACES.md §4): el motor modifica los bloques ?, y con varios entornos
-    en paralelo cada uno necesita el suyo. El stub (mario_stub.StubMarioGame)
-    se queda para los tests: se pasa con game_factory=StubMarioGame.
-    """
-    return MarioGame(build_level_1())
+
+def _level_builder(level):
+    """La función que construye el nivel: un número de LEVEL_BUILDERS o una
+    función sin argumentos que devuelva un Level nuevo."""
+    if callable(level):
+        return level
+    if isinstance(level, int) and not isinstance(level, bool) and level in LEVEL_BUILDERS:
+        return LEVEL_BUILDERS[level]
+    raise ValueError(f"level={level!r} no existe (hay: {sorted(LEVEL_BUILDERS)} "
+                     "o una función que devuelva un Level)")
 
 
 class MarioEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": FPS}
 
-    def __init__(self, game_factory=None, obs_type="grid", frame_skip=4,
+    def __init__(self, game_factory=None, obs_type="grid", level=1, frame_skip=4,
                  stuck_steps=STUCK_STEPS, max_steps=MAX_STEPS,
                  random_start=False, random_start_prob=0.5,
                  sticky_prob=0.0, goomba_speed_range=None,
@@ -160,7 +167,20 @@ class MarioEnv(gym.Env):
         self.goomba_speed_range = goomba_speed_range
         self.render_mode = render_mode
         self.render_scale = render_scale
-        self._game_factory = game_factory if game_factory is not None else _default_factory
+
+        # El juego (P3.8, P3.10). game_factory tiene prioridad (los tests pasan
+        # el stub o niveles mínimos); si no, el motor real con el nivel `level`.
+        # Un Level nuevo por entorno ("Un Level por MarioGame", INTERFACES.md
+        # §4): el motor modifica los bloques ?, y con varios entornos en
+        # paralelo cada uno necesita el suyo.
+        if game_factory is None:
+            builder = _level_builder(level)
+            self.level_id = level if isinstance(level, int) else getattr(
+                builder, "__name__", "custom")
+            game_factory = lambda: MarioGame(builder())   # noqa: E731
+        else:
+            self.level_id = None
+        self._game_factory = game_factory
         self.game = self._game_factory()
 
         self.action_space = spaces.Discrete(len(ACTIONS))
@@ -268,6 +288,7 @@ class MarioEnv(gym.Env):
             "steps": self._steps,
             "start_col": self._start_col,
             "goomba_speed": float(self.game.goomba_speed),
+            "level": self.level_id,
         }
 
     def _reset_counters(self) -> None:

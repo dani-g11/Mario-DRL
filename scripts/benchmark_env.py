@@ -3,7 +3,7 @@
 Objetivo de P3.8: más de 5000 pasos/s con el motor real (cada paso son 4 frames).
 Termina con código 1 si no llega, para que el CI lo detecte.
 
-Uso:  python scripts/benchmark_env.py [--seconds 3] [--obs grid|pixels]
+Uso:  python scripts/benchmark_env.py [--seconds 3] [--obs grid|pixels] [--level 1|2]
 """
 
 import argparse
@@ -20,9 +20,10 @@ from mario_env import MarioEnv  # noqa: E402
 TARGET_STEPS_PER_S = 5000
 
 
-def bench(seconds: float = 3.0, obs_type: str = "grid", seed: int = 0) -> tuple[float, int]:
+def bench(seconds: float = 3.0, obs_type: str = "grid", level: int = 1,
+          seed: int = 0) -> tuple[float, int]:
     """Pasos/s con acciones aleatorias (una de 7) y reset() al acabar cada episodio."""
-    env = MarioEnv(obs_type=obs_type)        # fábrica por defecto: el motor real, nivel 1
+    env = MarioEnv(obs_type=obs_type, level=level)     # el motor real
     rng = np.random.default_rng(seed)
     env.reset(seed=seed)
     steps = episodes = 0
@@ -41,12 +42,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--seconds", type=float, default=3.0)
     parser.add_argument("--obs", choices=("grid", "pixels"), default="grid")
+    parser.add_argument("--level", type=int, choices=(1, 2), default=1)
     args = parser.parse_args()
 
     if args.obs == "pixels":
         os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
-    rate, episodes = bench(args.seconds, args.obs)
-    print(f"{rate:,.0f} pasos de entorno/s con obs={args.obs} ({episodes} episodios)")
+    rate, episodes = bench(args.seconds, args.obs, args.level)
+    print(f"{rate:,.0f} pasos de entorno/s con obs={args.obs}, nivel {args.level} "
+          f"({episodes} episodios)")
     if args.obs == "grid":
         print(f"objetivo: > {TARGET_STEPS_PER_S:,} pasos/s (P3.8)")
         if rate <= TARGET_STEPS_PER_S:

@@ -365,7 +365,7 @@ internos son responsabilidad de Persona 3.
 | Truncado | 150 pasos sin avanzar (sin superar en más de 1 px el mejor `mario.x` del episodio); 3000 pasos como máximo | [PROFESOR] / [PROPUESTA v0.5] el máximo |
 | Inicio aleatorio | `random_start`: `reset(start_col)` con una columna de `level.checkpoints` | [PROFESOR] |
 | Aleatoriedad | acciones pegajosas y velocidad variable de goombas (vía `game.goomba_speed`) | [PROFESOR] / [PROPUESTA] el mecanismo |
-| Varios niveles | parámetro `level` | [PROFESOR] |
+| Varios niveles | parámetro `level`: `1`, `2` o una función que devuelva un `Level` | [PROFESOR] / [PROPUESTA v0.5] los valores |
 
 Tabla de acciones (traducción a `step(left, right, jump, run)`) [PROFESOR: el orden; PROPUESTA: los índices]:
 
@@ -391,8 +391,10 @@ Diccionario `info` [PROFESOR: las claves; PROPUESTA: la procedencia]:
 
 Claves extra de `info` [PROPUESTA v0.5]: `score`, `coins`, `time_left` (del
 juego), `steps` (pasos del episodio), `start_col` (columna de inicio del
-episodio) y `goomba_speed` (velocidad de los goombas del episodio). Las 5 del
-contrato están siempre; las extra pueden crecer sin romper nada.
+episodio), `goomba_speed` (velocidad de los goombas del episodio) y `level`
+(el nivel: `1`, `2`, el nombre de la función que lo construye, o `None` si el
+juego viene de `game_factory`). Las 5 del contrato están siempre; las extra
+pueden crecer sin romper nada.
 
 ### Observación `grid` en detalle [PROPUESTA v0.5]
 
@@ -414,17 +416,20 @@ recompensa, y la suma de un episodio es la distancia neta recorrida / 10.
 
 ### Parámetros de `MarioEnv` [PROPUESTA v0.5]
 
-`MarioEnv(game_factory=None, obs_type="grid", frame_skip=4, stuck_steps=150,
-max_steps=3000, random_start=False, random_start_prob=0.5, sticky_prob=0.0,
-goomba_speed_range=None, render_mode=None, render_scale=3)`, también a través
-de `gym.make("MarioPygame-v0", ...)` tras `import mario_env`.
+`MarioEnv(game_factory=None, obs_type="grid", level=1, frame_skip=4,
+stuck_steps=150, max_steps=3000, random_start=False, random_start_prob=0.5,
+sticky_prob=0.0, goomba_speed_range=None, render_mode=None, render_scale=3)`,
+también a través de `gym.make("MarioPygame-v0", ...)` tras `import mario_env`.
 
-- Con `game_factory=None` el juego es `MarioGame(build_level_1())`, con un
-  `Level` nuevo para cada entorno. Los tests pasan `game_factory=StubMarioGame`
-  (de `mario_stub.py`) cuando necesitan el stub.
+- `level` (P3.10): `1` (por defecto) o `2` (los de `mario_env.LEVEL_BUILDERS`),
+  o una función sin argumentos que devuelva un `Level` nuevo. Otro valor lanza
+  `ValueError`. `random_start` usa los checkpoints del nivel elegido.
+- Con `game_factory=None` el juego es `MarioGame(<builder de level>())`, con un
+  `Level` nuevo para cada entorno. Si se pasa `game_factory`, tiene prioridad
+  sobre `level`: los tests pasan `game_factory=StubMarioGame` (de
+  `mario_stub.py`) cuando necesitan el stub.
 - `render_mode` admite `"rgb_array"` (frame con HUD, `(240, 256, 3)` `uint8`) y
   `"human"`.
-- El parámetro `level` llega con P3.10.
 
 ### Aleatoriedad para robustez [PROPUESTA v0.5]
 
@@ -480,4 +485,4 @@ Un stub de `MarioGame` cumple el contrato si:
 | 0.2 | 2026-10-27 | §4 `reset()`: `ValueError` si un goomba o `start_col` cae sobre un foso o fuera del nivel (cambio compatible) | P1 (pendiente P2, P3, P4) |
 | 0.3 | 2026-10-27 | §4: `render()` lanza `ImportError` claro si falta `render.py`; un `Level` por `MarioGame` (cambio compatible) | P1 (pendiente P2, P3, P4) |
 | 0.4 | 2026-10-27 | Revisión contra el plan: tabla "qué pide el plan y qué añadimos", `build_level_2()`, `Body.right/bottom`, texto del rebote entre goombas y del stub ajustados a la implementación (cambio compatible) | P1 (pendiente P2, P3, P4) |
-| 0.5 | 2026-11-03 | §7: forma de la observación `grid`, Δx en la recompensa, máximo de 3000 pasos, claves extra de `info`, parámetros de `MarioEnv`, inicio aleatorio y aleatoriedad para robustez (cambio compatible) | P3 (pendiente P1, P2, P4) |
+| 0.5 | 2026-11-03 | §7: forma de la observación `grid`, Δx en la recompensa, máximo de 3000 pasos, claves extra de `info`, parámetros de `MarioEnv`, inicio aleatorio, aleatoriedad para robustez y parámetro `level` (cambio compatible) | P3 (pendiente P1, P2, P4) |
