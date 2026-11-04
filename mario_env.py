@@ -35,6 +35,9 @@ Recompensa y fin de episodio (P3.5, valores del plan de trabajo):
     terminated  Mario muere (foso, goomba o tiempo) o toca la bandera.
     truncated   sin terminar, `stuck_steps` pasos seguidos sin superar en más de
                 1 px el mejor x del episodio, o `max_steps` pasos en total.
+
+`info` (P3.6): x_pos, progress, flag_get, dead y death_reason (contrato), más
+score, coins, time_left y steps. El entorno se registra como "MarioPygame-v0".
 """
 
 import gymnasium as gym
@@ -142,7 +145,7 @@ class MarioEnv(gym.Env):
         self._reset_counters()
         if self.render_mode == "human":
             self._render_human()
-        return self._obs(), {}
+        return self._obs(), self._info()
 
     def step(self, action):
         game = self.game
@@ -172,7 +175,26 @@ class MarioEnv(gym.Env):
         truncated = (not terminated) and (
             self._steps_without_progress >= self.stuck_steps
             or self._steps >= self.max_steps)
-        return self._obs(), float(reward), terminated, truncated, {}
+        return self._obs(), float(reward), terminated, truncated, self._info()
+
+    def _info(self) -> dict:
+        """Diccionario `info` de reset() y step().
+
+        Las 5 primeras claves son las del contrato (INTERFACES.md §7) y están
+        siempre. Las demás son extras para el HUD y las métricas de P4.
+        """
+        game = self.game
+        return {
+            "x_pos": float(game.mario.x),
+            "progress": float(game.progress),
+            "flag_get": bool(game.won),
+            "dead": bool(game.dead),
+            "death_reason": game.death_reason,
+            "score": int(game.score),
+            "coins": int(game.coins),
+            "time_left": int(game.time_left),
+            "steps": self._steps,
+        }
 
     def _reset_counters(self) -> None:
         """Contadores del episodio para el truncado (P3.5)."""
@@ -304,3 +326,11 @@ class MarioEnv(gym.Env):
         pygame.transform.scale(canvas, self._window.get_size(), self._window)
         pygame.display.flip()
         self._clock.tick(self.metadata["render_fps"])
+
+
+# Registro en Gymnasium (INTERFACES.md §7). Ocurre al importar este módulo: hay
+# que hacer `import mario_env` antes de gym.make(ENV_ID). Los argumentos de
+# MarioEnv pasan por gym.make, p. ej. gym.make(ENV_ID, obs_type="pixels").
+ENV_ID = "MarioPygame-v0"
+if ENV_ID not in gym.registry:
+    gym.register(id=ENV_ID, entry_point="mario_env:MarioEnv")

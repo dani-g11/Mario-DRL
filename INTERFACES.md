@@ -1,6 +1,6 @@
 # INTERFACES.md — Contrato de interfaces de Mario DRL
 
-Versión: **0.4 (borrador, pendiente de aprobación de las 4 personas)**
+Versión: **0.5 (borrador, pendiente de aprobación de las 4 personas)**
 Motor que lo implementa: `mario_game.__version__ == "1.0.0"`
 Responsable del documento: Persona 1 (motor del juego)
 
@@ -358,11 +358,11 @@ internos son responsabilidad de Persona 3.
 |---|---|---|
 | Id de registro | `MarioPygame-v0` | [PROFESOR] |
 | Acciones | `Discrete(7)`; cada acción se mantiene 4 frames | [PROFESOR] |
-| Observación `grid` | Rejilla de tiles alrededor de Mario (sólidos y enemigos) más velocidad, si está en el suelo y enemigos cercanos. Forma exacta: la define P3 | [PROFESOR] / pendiente P3 |
-| Observación `pixels` | `uint8` de forma `(84, 84, 1)`, en grises | [PROFESOR] |
-| Recompensa | avance en x / 10, −0.01 por paso, −15 al morir, +50 al tocar la bandera | [PROFESOR] |
+| Observación `grid` | Rejilla de tiles alrededor de Mario (sólidos y enemigos) más velocidad, si está en el suelo y enemigos cercanos. `float32` de forma `(498,)` en `[-1, 1]` (detalle abajo) | [PROFESOR] / [PROPUESTA v0.5] la forma |
+| Observación `pixels` | `uint8` de forma `(84, 84, 1)`, en grises, sin HUD. El apilado de frames lo hace P4 | [PROFESOR] |
+| Recompensa | avance en x / 10, −0.01 por paso, −15 al morir, +50 al tocar la bandera. "Avance en x" = Δ`mario.x` en el paso | [PROFESOR] / [PROPUESTA v0.5] Δx |
 | Terminación | muerte (foso, goomba o tiempo) o bandera | [PROFESOR] |
-| Truncado | 150 pasos sin avanzar; pasos máximos (valor a definir por P3) | [PROFESOR] / pendiente P3 |
+| Truncado | 150 pasos sin avanzar (sin superar en más de 1 px el mejor `mario.x` del episodio); 3000 pasos como máximo | [PROFESOR] / [PROPUESTA v0.5] el máximo |
 | Inicio aleatorio | `random_start`: `reset(start_col)` con una columna de `level.checkpoints` | [PROFESOR] |
 | Aleatoriedad | acciones pegajosas y velocidad variable de goombas (vía `game.goomba_speed`) | [PROFESOR] / [PROPUESTA] el mecanismo |
 | Varios niveles | parámetro `level` | [PROFESOR] |
@@ -389,8 +389,35 @@ Diccionario `info` [PROFESOR: las claves; PROPUESTA: la procedencia]:
 | `dead` | `bool` | `game.dead` |
 | `death_reason` | `str \| None` | `game.death_reason` |
 
-Nota para P3: "avance en x" puede calcularse como `Δ mario.x` o como
-`Δ max_x`. La elección es de P3, pero debe documentarse aquí cuando se tome.
+Claves extra de `info` [PROPUESTA v0.5]: `score`, `coins`, `time_left` (del
+juego) y `steps` (pasos del episodio). Las 5 del contrato están siempre; las
+extra pueden crecer sin romper nada.
+
+### Observación `grid` en detalle [PROPUESTA v0.5]
+
+Vector `float32` de 498 valores en `[-1, 1]`, con estas partes en este orden
+(los índices están como constantes en `mario_env.py`: `GRID_CELLS`,
+`STATE_OFFSET`, `ENEMIES_OFFSET`, `GRID_OBS_DIM`):
+
+| Parte | Tamaño | Contenido |
+|---|---|---|
+| Sólidos | 15 × 16 | 1 si el tile es sólido (fuera del mapa por los lados también). 3 columnas por detrás de Mario y 12 por delante |
+| Enemigos | 15 × 16 | 1 en la celda del centro de cada goomba activo y no aplastado |
+| Estado | 6 | `y/SCREEN_H`, `vx/RUN_MAX_SPEED`, `vy/TILE`, `on_ground`, fracción de tile de Mario en x, `jump_held` |
+| Cercanos | 3 × 4 | Los 3 goombas más cercanos con `-0.5 < dx < 1` (en pantallas): `dx/SCREEN_W`, `dy/SCREEN_H`, `direction`, 1. Ceros si no hay |
+
+### Recompensa: Δx [PROPUESTA v0.5]
+
+"Avance en x" es `Δ mario.x` en el paso (no `Δ max_x`): retroceder resta
+recompensa, y la suma de un episodio es la distancia neta recorrida / 10.
+
+### Parámetros de `MarioEnv` [PROPUESTA v0.5]
+
+`MarioEnv(game_factory=None, obs_type="grid", frame_skip=4, stuck_steps=150,
+max_steps=3000, render_mode=None, render_scale=3)`, también a través de
+`gym.make("MarioPygame-v0", ...)` tras `import mario_env`. `render_mode` admite
+`"rgb_array"` (frame con HUD, `(240, 256, 3)` `uint8`) y `"human"`.
+`random_start`, la aleatoriedad y `level` llegan con P3.7, P3.9 y P3.10.
 
 ---
 
@@ -426,3 +453,4 @@ Un stub de `MarioGame` cumple el contrato si:
 | 0.2 | 2026-10-27 | §4 `reset()`: `ValueError` si un goomba o `start_col` cae sobre un foso o fuera del nivel (cambio compatible) | P1 (pendiente P2, P3, P4) |
 | 0.3 | 2026-10-27 | §4: `render()` lanza `ImportError` claro si falta `render.py`; un `Level` por `MarioGame` (cambio compatible) | P1 (pendiente P2, P3, P4) |
 | 0.4 | 2026-10-27 | Revisión contra el plan: tabla "qué pide el plan y qué añadimos", `build_level_2()`, `Body.right/bottom`, texto del rebote entre goombas y del stub ajustados a la implementación (cambio compatible) | P1 (pendiente P2, P3, P4) |
+| 0.5 | 2026-11-03 | §7: forma de la observación `grid`, Δx en la recompensa, máximo de 3000 pasos, claves extra de `info` y parámetros de `MarioEnv` (cambio compatible) | P3 (pendiente P1, P2, P4) |
