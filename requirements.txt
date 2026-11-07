@@ -1,6 +1,13 @@
 # Python 3.12 (acordado por el equipo). Versiones fijadas.
-# gymnasium y numpy: entorno de P3. P4 añadirá stable-baselines3 y torch.
+# pygame, gymnasium y numpy: motor (P1), gráficos (P2) y entorno (P3).
+# stable-baselines3, torch y tensorboard: entrenamiento y evaluación (P4).
 pygame==2.6.1
 pytest==9.2.0
 gymnasium==1.4.0
 numpy==2.5.4
+stable-baselines3==2.9.2
+torch==2.15.0
+tensorboard==2.21.0
+# tqdm y rich: barra de progreso de SB3 durante el entrenamiento.
+tqdm==4.70.1
+rich==15.0.0
