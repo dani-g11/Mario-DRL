@@ -11,3 +11,6 @@ tensorboard==2.21.0
 # tqdm y rich: barra de progreso de SB3 durante el entrenamiento.
 tqdm==4.70.1
 rich==15.0.0
+# imageio e imageio-ffmpeg: grabar el vídeo del agente (P4.9).
+imageio==2.38.1
+imageio-ffmpeg==0.8.1
