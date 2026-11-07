@@ -122,7 +122,8 @@ def main(argv=None) -> None:
     from stable_baselines3 import PPO
     from stable_baselines3.common.callbacks import CheckpointCallback
 
-    from mario_training import make_cartpole_venv, make_mario_venv
+    from mario_training import (MarioMetricsCallback, make_cartpole_venv,
+                                make_mario_venv)
 
     if args.torch_threads is not None:
         torch.set_num_threads(args.torch_threads)   # P4.4
@@ -155,6 +156,8 @@ def main(argv=None) -> None:
         )
         # CnnPolicy para imágenes (pixels), MlpPolicy para el vector grid.
         policy = "CnnPolicy" if args.obs == "pixels" else "MlpPolicy"
+        # Las métricas Mario (P4.2) solo tienen sentido con el entorno Mario.
+        callbacks.append(MarioMetricsCallback())
 
     if args.resume:
         print(f"Reanudando desde {args.resume}")
