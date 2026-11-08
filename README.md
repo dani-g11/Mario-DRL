@@ -76,11 +76,42 @@ si cambian los niveles o la física del motor, hay que volver a generar los info
 [`docs/validacion_nivel1.md`](docs/validacion_nivel1.md) y
 [`docs/validacion_nivel2.md`](docs/validacion_nivel2.md).
 
+## Entrenar y evaluar el agente (Persona 4)
+
+El agente aprende con PPO (Stable-Baselines3). `train.py` entrena y `evaluate.py`
+mide; el método y los resultados están en [`docs/informe_final.md`](docs/informe_final.md).
+
+```powershell
+python train.py --cartpole --steps 100000                       # probar el pipeline (P4.1)
+python train.py --obs grid --steps 2000000 --name lvl1_grid_s0  # entrenamiento principal (P4.6)
+python train.py --obs pixels --frame-stack 4 --steps 2000000    # con imágenes (P4.7)
+tensorboard --logdir runs                                       # curvas y métricas Mario (P4.2)
+```
+
+```powershell
+python evaluate.py --model models/lvl1_grid_s0/final.zip --episodes 20          # estadístico
+python evaluate.py --model models/lvl1_grid_s0/final.zip --render --episodes 3  # visual
+python evaluate.py --model models/lvl1_grid_s0/final.zip --episodes 20 --level 2  # generalización (P4.8)
+```
+
+Scripts de apoyo:
+
+```powershell
+python scripts/baselines.py --episodes 30         # líneas base aleatoria y heurística (P4.5)
+python scripts/profile_training.py --obs grid     # pasos/s por hilos y entornos (P4.4)
+python scripts/run_experiments.py --dry-run       # ver el plan de experimentos (P4.7, P4.8)
+python scripts/record_video.py --model models/lvl1_grid_s0/final.zip   # vídeo del agente (P4.9)
+```
+
+Los modelos (`models/`), los logs de TensorBoard (`runs/`) y los vídeos no se
+versionan (ver `.gitignore`).
+
 ## Tests y rendimiento
 
 ```powershell
 python -m pytest              # suite completa (sin ventana: SDL_VIDEODRIVER=dummy)
 python -m pytest -v tests/test_contract.py   # solo los límites del contrato
+python -m pytest -v tests/test_training.py   # utilidades y callback de entrenamiento (P4)
 python scripts/benchmark_engine.py           # frames/s del motor sin gráficos
 ```
 
