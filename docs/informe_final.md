@@ -67,15 +67,28 @@ y número de entornos. El plan avisa de que demasiados hilos ralentizan
 (~800 pasos/s con 24 hilos; ~2500–3000 con 4).
 
 ```bash
-python scripts/profile_training.py --obs grid --threads 1 2 4 8 --n-envs 8 16
+python scripts/profile_training.py --obs grid --threads 1 2 4 8 --n-envs 4 8 16 --steps 30000
+python scripts/profile_training.py --obs grid --threads 1 2 --n-envs 24 32 --steps 30000
 ```
 
-| Entornos | Hilos PyTorch | Pasos/s | Notas |
-|---|---|---|---|
-| (pendiente de la corrida en el portátil del equipo) | | | |
+Medido el 2026-11-08 en una CPU de 32 núcleos lógicos, sin GPU (torch 2.15.0+cpu),
+`obs=grid`, `SubprocVecEnv`, 30 000 pasos por configuración:
 
-Conclusión (a rellenar): usar `--n-envs N --torch-threads T` en el entrenamiento
-principal.
+| Entornos | 1 hilo | 2 hilos | 4 hilos | 8 hilos |
+|---|---|---|---|---|
+| 4 | 999 | 1 211 | 1 198 | 948 |
+| 8 | 1 780 | 1 548 | 1 433 | 1 413 |
+| 16 | **2 155** | 1 742 | 1 415 | 1 613 |
+| 24 | 1 507 | 1 679 | — | — |
+| 32 | 1 824 | 1 614 | — | — |
+
+(pasos/s de PPO, recogida de experiencia + actualización)
+
+Conclusión: usar `--n-envs 16 --torch-threads 1` en el entrenamiento principal
+(~2 150 pasos/s, unos 15–20 min para 2 M de pasos). Como avisaba el plan, más
+hilos de PyTorch no ayudan con una `MlpPolicy` pequeña; y pasar de 16 entornos
+no compensa por el coste de los procesos. Las diferencias de ~10 % entre
+configuraciones vecinas están dentro del ruido de una corrida corta.
 
 ## 5. Líneas base (P4.5)
 
@@ -94,14 +107,35 @@ referencia (el nivel es superable; lo valida también `mario_game/validate.py`).
 ## 6. Entrenamiento principal (P4.6)
 
 ```bash
-python train.py --obs grid --steps 2000000 --name lvl1_grid_s0 --seed 0
+python train.py --obs grid --steps 2000000 --name lvl1_grid_s0 --seed 0 --n-envs 16 --torch-threads 1
+python evaluate.py --model models/lvl1_grid_s0/final.zip --episodes 20
 ```
 
-Criterio de P4.6: el agente llega a la bandera desde el inicio.
+Criterio de P4.6: el agente llega a la bandera desde el inicio. **Cumplido.**
 
-- Pasos: 2 000 000.
-- Tiempo de entrenamiento: (pendiente de la corrida).
-- Tasa de bandera al final (evaluación de 20 episodios): (pendiente).
+Corrida del 2026-11-08 (CPU de 32 núcleos lógicos, sin GPU, configuración del §4):
+
+- Pasos: 2 000 000 (2 007 040 por redondeo al tamaño del rollout).
+- Tiempo de entrenamiento: 18 min 6 s (~1 850 pasos/s), muy por debajo del
+  límite de 3 h del plan.
+- Tasa de bandera al final (evaluación de 20 episodios): **20/20 (100 %)**,
+  progreso medio 100 %, recompensa media 340,2, ~300 pasos por episodio.
+
+Curva de aprendizaje (`mario/flag_rate` y `mario/progress_mean`, media móvil de
+100 episodios de entrenamiento):
+
+| Pasos | Tasa de bandera | Progreso medio |
+|---|---|---|
+| 200 000 | 3 % | 42 % |
+| 400 000 | 77 % | 88 % |
+| 600 000 | 92 % | 96 % |
+| 800 000 | 97 % | 98 % |
+| 1 000 000 – 1 800 000 | 98 % | 98–99 % |
+| 2 000 000 | 100 % | 100 % |
+
+El agente supera el 90 % hacia los 600 000 pasos (~6 min) y se estabiliza a
+partir del millón. Este resultado es sin aleatoriedad: la robustez y la
+generalización se miden en el §8.
 
 ## 7. Experimentos (P4.7)
 
@@ -137,16 +171,32 @@ python evaluate.py --model models/lvl1_grid_s0/final.zip --episodes 20 \
 python evaluate.py --model models/lvl1_grid_s0/final.zip --episodes 20 --level 2
 ```
 
-| Condición | Tasa de bandera (20 ep.) | Progreso medio |
-|---|---|---|
-| Sin aleatoriedad (nivel 1) | (pendiente) | (pendiente) |
-| Acciones pegajosas (0.1) | (pendiente) | (pendiente) |
-| Velocidad de goomba 0.3–1.5 | (pendiente) | (pendiente) |
-| Generalización (nivel 2) | (pendiente) | (pendiente) |
+Resultados del modelo `lvl1_grid_s0` (§6, entrenado sin aleatoriedad), medidos
+el 2026-11-08. La última fila combina las dos fuentes de aleatoriedad, que es lo
+que pide el criterio de éxito del §1:
 
-Lectura esperada: si el agente memoriza el nivel determinista, caerá con
-aleatoriedad y en el nivel 2; entrenar con inicio aleatorio y evaluar en ambos
-niveles mide si de verdad aprendió a jugar.
+| Condición | Tasa de bandera (20 ep.) | Progreso medio | Muertes |
+|---|---|---|---|
+| Sin aleatoriedad (nivel 1) | 20/20 (100 %) | 100 % | — |
+| Acciones pegajosas (0.1) | 20/20 (100 %) | 100 % | — |
+| Velocidad de goomba 0.3–1.5 | 19/20 (95 %) | 96,9 % | 1 goomba |
+| Pegajosas 0.1 + goomba 0.3–1.5 | **17/20 (85 %)** | 89,3 % | 3 goomba |
+| Generalización (nivel 2) | 16/20 (80 %) | 88,8 % | 4 goomba |
+
+Lectura:
+
+- Las acciones pegajosas no le afectan: el agente no depende de una secuencia
+  exacta de pulsaciones.
+- Los goombas con velocidad variable son su punto débil. Todas las muertes son
+  por goomba, casi todas en el mismo punto (~39 % del nivel 1, ~44 % del
+  nivel 2): el agente aprendió dónde suelen estar los goombas a velocidad fija,
+  no a reaccionar a dónde están.
+- Con las dos fuentes de aleatoriedad a la vez se queda en el 85 %, **por debajo
+  del 90 % del criterio de éxito**. En el nivel 2, que nunca ha visto, llega al
+  80 %: generaliza bastante (mismas piezas, otro orden), pero no del todo.
+- Siguiente paso: entrenar con aleatoriedad activada (`--goomba-speed-min 0.3
+  --goomba-speed-max 1.5 --sticky-prob 0.1`) y con inicio aleatorio
+  (`--random-start`), que es la rejilla del §7, y volver a medir esta tabla.
 
 ## 9. Vídeo de demostración (P4.9)
 
@@ -156,7 +206,25 @@ python scripts/record_video.py --model models/lvl1_grid_s0/final.zip \
 ```
 
 Graba el agente completando el nivel usando el render con HUD del entorno. Si no
-hay ffmpeg, cae a GIF automáticamente.
+hay ffmpeg, cae a GIF automáticamente. Acepta las mismas opciones de
+aleatoriedad que `evaluate.py` (`--sticky-prob`, `--goomba-speed-min/max`) y
+además `--random-start`:
+
+```bash
+python scripts/record_video.py --model models/lvl1_grid_s0/final.zip --deterministic \
+    --fps 15 --goomba-speed-min 0.3 --goomba-speed-max 1.5 --sticky-prob 0.1 \
+    --episodes 3 --out docs/captures/agente_aleatorio.mp4
+```
+
+Vídeos grabados el 2026-11-08 con `lvl1_grid_s0`, a velocidad real (`--fps 15`:
+un frame por paso del agente, que son 4 frames de juego a 60 FPS) y escalados ×3
+sin suavizado (768×720) para proyectarlos:
+
+| Vídeo | Contenido | Resultado |
+|---|---|---|
+| `agente_nivel1.mp4` | Nivel 1, sin aleatoriedad | Bandera |
+| `agente_nivel2.mp4` | Nivel 2 (no visto), sin aleatoriedad | Bandera |
+| `agente_aleatorio.mp4` | Nivel 1, 3 episodios con pegajosas 0.1 y goombas a 1,06, 0,91 y 0,61 | 3 banderas |
 
 ## 10. Reproducir todo
 

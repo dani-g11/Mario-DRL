@@ -8,6 +8,11 @@ INTERFACES.md §7). El vídeo demuestra que el agente completa el nivel.
     python scripts/record_video.py --model models/lvl1_grid_s0/final.zip \
         --episodes 3 --out docs/captures/agente_nivel1.mp4
 
+Con aleatoriedad (las mismas opciones que evaluate.py, P3.9 y P4.8), para
+enseñar al agente con goombas a otra velocidad o con acciones pegajosas:
+
+    python scripts/record_video.py --model models/lvl1_grid_s0/final.zip         --goomba-speed-min 0.3 --goomba-speed-max 1.5 --sticky-prob 0.1         --episodes 3 --out docs/captures/agente_aleatorio.mp4
+
 El MP4 necesita imageio-ffmpeg; si no está, cae a GIF automáticamente. El GIF no
 necesita nada extra (imageio viene con pygame/numpy del proyecto... si no, se
 avisa de cómo instalarlo).
@@ -37,6 +42,24 @@ def _frames_de_episodio(model, env, deterministic, seed):
         frames.append(env.render())
         done = term or trunc
     return frames, info
+
+
+def env_kwargs(args) -> dict:
+    """Argumentos de gym.make para MarioPygame-v0 a partir de la línea de comandos.
+
+    Sin opciones de aleatoriedad se graba el entorno determinista de siempre.
+    """
+    kwargs = {"obs_type": args.obs, "level": args.level, "render_mode": "rgb_array"}
+    if args.sticky_prob:
+        kwargs["sticky_prob"] = args.sticky_prob
+    if (args.goomba_speed_min is None) != (args.goomba_speed_max is None):
+        raise SystemExit("--goomba-speed-min y --goomba-speed-max van juntos.")
+    if args.goomba_speed_min is not None:
+        kwargs["goomba_speed_range"] = (args.goomba_speed_min, args.goomba_speed_max)
+    if args.random_start:
+        kwargs["random_start"] = True
+        kwargs["random_start_prob"] = args.random_start_prob
+    return kwargs
 
 
 def _guardar(frames, out: Path, fps: int) -> Path:
@@ -72,7 +95,19 @@ def main(argv=None) -> None:
     parser.add_argument("--fps", type=int, default=30, help="Frames por segundo del vídeo.")
     parser.add_argument("--out", default="docs/captures/agente.mp4",
                         help="Archivo de salida (.mp4 o .gif).")
+    parser.add_argument("--sticky-prob", type=float, default=0.0,
+                        help="Acciones pegajosas (P3.9), como en evaluate.py.")
+    parser.add_argument("--goomba-speed-min", type=float, default=None,
+                        help="Velocidad mínima de goombas, sorteada en cada episodio "
+                             "(con --goomba-speed-max).")
+    parser.add_argument("--goomba-speed-max", type=float, default=None,
+                        help="Velocidad máxima de goombas (con --goomba-speed-min).")
+    parser.add_argument("--random-start", action="store_true",
+                        help="Empezar algunos episodios en un checkpoint (P3.7).")
+    parser.add_argument("--random-start-prob", type=float, default=0.5,
+                        help="Probabilidad de inicio aleatorio con --random-start.")
     args = parser.parse_args(argv)
+    kwargs = env_kwargs(args)
 
     try:
         import imageio  # noqa: F401
@@ -86,8 +121,7 @@ def main(argv=None) -> None:
     from gymnasium.wrappers import FrameStackObservation
 
     # render_mode="rgb_array": cada env.render() devuelve un frame con HUD.
-    env = gym.make(mario_env.ENV_ID, obs_type=args.obs, level=args.level,
-                   render_mode="rgb_array")
+    env = gym.make(mario_env.ENV_ID, **kwargs)
     if args.frame_stack > 1 and args.obs == "pixels":
         env = FrameStackObservation(env, stack_size=args.frame_stack)
 
@@ -98,6 +132,7 @@ def main(argv=None) -> None:
         all_frames.extend(frames)
         print(f"  episodio {ep + 1}: {len(frames)} frames, progreso "
               f"{info.get('progress', 0) * 100:.1f}%, "
+              f"goomba_speed {info.get('goomba_speed', 0):.2f}, "
               f"{'BANDERA' if info.get('flag_get') else 'muerte:' + str(info.get('death_reason'))}")
     env.close()
 

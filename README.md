@@ -101,6 +101,7 @@ python scripts/baselines.py --episodes 30         # líneas base aleatoria y heu
 python scripts/profile_training.py --obs grid     # pasos/s por hilos y entornos (P4.4)
 python scripts/run_experiments.py --dry-run       # ver el plan de experimentos (P4.7, P4.8)
 python scripts/record_video.py --model models/lvl1_grid_s0/final.zip   # vídeo del agente (P4.9)
+python scripts/record_video.py --model models/lvl1_grid_s0/final.zip --goomba-speed-min 0.3 --goomba-speed-max 1.5 --sticky-prob 0.1   # con aleatoriedad
 ```
 
 Los modelos (`models/`), los logs de TensorBoard (`runs/`) y los vídeos no se
