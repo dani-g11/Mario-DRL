@@ -3,6 +3,7 @@
 > **Por:** Daniel Giraldo, Diego Angarita, Esteban Alvarez, Ismael Garcia
 > **Entrega final:** Introducción a la inteligencia artificial.
 
+![Mario, un goomba y el HUD](docs/captures/entidades.png)
 
 ## 1. Introducción
 
