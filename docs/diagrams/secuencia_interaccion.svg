@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="900" viewBox="0 0 1500 900">
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#334155"/></marker>
+    <style>
+      .title{font:700 30px Arial;fill:#0f172a}.sub{font:18px Arial;fill:#475569}.actor{font:700 18px Arial;fill:#0f172a}.msg{font:16px Arial;fill:#1e293b}.note{font:15px Arial;fill:#334155}.life{stroke:#94a3b8;stroke-width:2;stroke-dasharray:8 7}.line{stroke:#334155;stroke-width:2;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1500" height="900" fill="#f8fafc"/>
+  <text x="750" y="48" text-anchor="middle" class="title">Diagrama de secuencia — interacción del agente con Mario DRL</text>
+  <text x="750" y="78" text-anchor="middle" class="sub">Un episodio desde la acción del agente hasta la recompensa</text>
+
+  <rect x="55" y="115" width="180" height="58" rx="12" fill="#e0e7ff" stroke="#6366f1" stroke-width="2"/><text x="145" y="151" text-anchor="middle" class="actor">Agente PPO</text>
+  <rect x="315" y="115" width="180" height="58" rx="12" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/><text x="405" y="151" text-anchor="middle" class="actor">MarioEnv</text>
+  <rect x="575" y="115" width="180" height="58" rx="12" fill="#fef3c7" stroke="#d97706" stroke-width="2"/><text x="665" y="151" text-anchor="middle" class="actor">MarioGame</text>
+  <rect x="835" y="115" width="180" height="58" rx="12" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/><text x="925" y="151" text-anchor="middle" class="actor">Nivel / tiles</text>
+  <rect x="1095" y="115" width="180" height="58" rx="12" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/><text x="1185" y="151" text-anchor="middle" class="actor">Render</text>
+  <rect x="1355" y="115" width="100" height="58" rx="12" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/><text x="1405" y="151" text-anchor="middle" class="actor">Usuario</text>
+
+  <line x1="145" y1="173" x2="145" y2="800" class="life"/><line x1="405" y1="173" x2="405" y2="800" class="life"/><line x1="665" y1="173" x2="665" y2="800" class="life"/><line x1="925" y1="173" x2="925" y2="800" class="life"/><line x1="1185" y1="173" x2="1185" y2="800" class="life"/><line x1="1405" y1="173" x2="1405" y2="800" class="life"/>
+
+  <line x1="145" y1="225" x2="405" y2="225" class="line"/><text x="275" y="214" text-anchor="middle" class="msg">1. reset() / iniciar episodio</text>
+  <line x1="405" y1="270" x2="665" y2="270" class="line"/><text x="535" y="259" text-anchor="middle" class="msg">2. game.reset(start_col)</text>
+  <line x1="665" y1="315" x2="925" y2="315" class="line"/><text x="795" y="304" text-anchor="middle" class="msg">3. consulta sólidos y posición inicial</text>
+  <line x1="925" y1="360" x2="665" y2="360" class="line"/><text x="795" y="349" text-anchor="middle" class="msg">4. devuelve escenario válido</text>
+  <line x1="665" y1="405" x2="405" y2="405" class="line"/><text x="535" y="394" text-anchor="middle" class="msg">5. devuelve observación inicial</text>
+  <line x1="405" y1="450" x2="145" y2="450" class="line"/><text x="275" y="439" text-anchor="middle" class="msg">6. elige acción</text>
+  <line x1="145" y1="495" x2="405" y2="495" class="line"/><text x="275" y="484" text-anchor="middle" class="msg">7. step(action)</text>
+  <line x1="405" y1="540" x2="665" y2="540" class="line"/><text x="535" y="529" text-anchor="middle" class="msg">8. traduce acción a botones</text>
+  <line x1="665" y1="585" x2="925" y2="585" class="line"/><text x="795" y="574" text-anchor="middle" class="msg">9. aplica física y colisiones</text>
+  <line x1="665" y1="630" x2="1185" y2="630" class="line"/><text x="925" y="619" text-anchor="middle" class="msg">10. renderiza estado, si se solicita</text>
+  <line x1="665" y1="675" x2="405" y2="675" class="line"/><text x="535" y="664" text-anchor="middle" class="msg">11. estado: progreso, muerte o victoria</text>
+  <line x1="405" y1="720" x2="145" y2="720" class="line"/><text x="275" y="709" text-anchor="middle" class="msg">12. observación + recompensa + done</text>
+  <line x1="1405" y1="765" x2="1185" y2="765" class="line"/><text x="1295" y="754" text-anchor="middle" class="msg">modo humano: observa la pantalla</text>
+
+  <rect x="135" y="825" width="1230" height="45" rx="12" fill="#e0e7ff" stroke="#818cf8"/>
+  <text x="750" y="853" text-anchor="middle" class="note">La simulación continúa repitiendo los pasos 6–12 hasta ganar, morir o truncar el episodio.</text>
+</svg>

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="720" viewBox="0 0 1500 720">
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto"><path d="M0,0 L12,4 L0,8 Z" fill="#475569"/></marker>
+    <filter id="shadow"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#64748b" flood-opacity=".2"/></filter>
+    <style>
+      .title{font:700 32px Arial;fill:#0f172a}.sub{font:18px Arial;fill:#475569}.h{font:700 20px Arial;fill:#0f172a}.p{font:16px Arial;fill:#334155}.small{font:14px Arial;fill:#475569}.arrow{stroke:#475569;stroke-width:3;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1500" height="720" fill="#f8fafc"/>
+  <text x="750" y="52" text-anchor="middle" class="title">Flujo metodológico del proyecto Mario DRL</text>
+  <text x="750" y="84" text-anchor="middle" class="sub">Desde la definición del mundo hasta la evaluación del agente</text>
+
+  <g filter="url(#shadow)"><rect x="55" y="185" width="220" height="210" rx="16" fill="#fff7ed" stroke="#f97316" stroke-width="3"/>
+    <text x="165" y="225" text-anchor="middle" class="h">1. Diseño</text><text x="165" y="260" text-anchor="middle" class="p">Reglas y contrato</text><text x="165" y="290" text-anchor="middle" class="p">Constantes físicas</text><text x="165" y="320" text-anchor="middle" class="p">Niveles ASCII</text><text x="165" y="365" text-anchor="middle" class="small">Entrada: requisitos</text></g>
+  <path d="M275 290 H325" class="arrow"/>
+
+  <g filter="url(#shadow)"><rect x="325" y="185" width="220" height="210" rx="16" fill="#eff6ff" stroke="#2563eb" stroke-width="3"/>
+    <text x="435" y="225" text-anchor="middle" class="h">2. Motor</text><text x="435" y="260" text-anchor="middle" class="p">Física y movimiento</text><text x="435" y="290" text-anchor="middle" class="p">Colisiones</text><text x="435" y="320" text-anchor="middle" class="p">Cámara y reglas</text><text x="435" y="365" text-anchor="middle" class="small">Salida: estado del juego</text></g>
+  <path d="M545 290 H595" class="arrow"/>
+
+  <g filter="url(#shadow)"><rect x="595" y="185" width="220" height="210" rx="16" fill="#f0fdf4" stroke="#16a34a" stroke-width="3"/>
+    <text x="705" y="225" text-anchor="middle" class="h">3. Entorno</text><text x="705" y="260" text-anchor="middle" class="p">Acciones discretas</text><text x="705" y="290" text-anchor="middle" class="p">Observación grid/pixels</text><text x="705" y="320" text-anchor="middle" class="p">Recompensa y final</text><text x="705" y="365" text-anchor="middle" class="small">Salida: episodios Gymnasium</text></g>
+  <path d="M815 290 H865" class="arrow"/>
+
+  <g filter="url(#shadow)"><rect x="865" y="185" width="220" height="210" rx="16" fill="#f5f3ff" stroke="#7c3aed" stroke-width="3"/>
+    <text x="975" y="225" text-anchor="middle" class="h">4. Entrenamiento</text><text x="975" y="260" text-anchor="middle" class="p">PPO y política</text><text x="975" y="290" text-anchor="middle" class="p">Entornos en paralelo</text><text x="975" y="320" text-anchor="middle" class="p">Métricas y checkpoints</text><text x="975" y="365" text-anchor="middle" class="small">Salida: modelo entrenado</text></g>
+  <path d="M1085 290 H1135" class="arrow"/>
+
+  <g filter="url(#shadow)"><rect x="1135" y="185" width="310" height="210" rx="16" fill="#fef2f2" stroke="#dc2626" stroke-width="3"/>
+    <text x="1290" y="225" text-anchor="middle" class="h">5. Evaluación</text><text x="1290" y="260" text-anchor="middle" class="p">Tasa de llegada a bandera</text><text x="1290" y="290" text-anchor="middle" class="p">Progreso y causas de muerte</text><text x="1290" y="320" text-anchor="middle" class="p">Nivel 2 y aleatoriedad</text><text x="1290" y="365" text-anchor="middle" class="small">Salida: resultados e informe</text></g>
+
+  <rect x="170" y="500" width="1160" height="95" rx="16" fill="#e0e7ff" stroke="#818cf8" stroke-width="2"/>
+  <text x="750" y="538" text-anchor="middle" class="h">Ciclo de aprendizaje por refuerzo</text>
+  <text x="750" y="570" text-anchor="middle" class="p">El agente observa el estado → elige una acción → el motor actualiza el mundo → recibe recompensa → repite.</text>
+  <path d="M1290 395 V455 H165 V395" class="arrow" stroke-dasharray="8 8"/>
+  <text x="750" y="650" text-anchor="middle" class="small">La Persona 1 aporta principalmente las etapas 1 y 2: el mundo y las reglas que hacen válida la interacción.</text>
+</svg>
