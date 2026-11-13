@@ -1,9 +1,8 @@
 # Mario DRL — Motor, entorno y aprendizaje por refuerzo
 
-> **Autores:** [Nombres del equipo]
-> **Curso:** [Nombre del curso]
-> **Institución:** [Nombre de la institución]
-> **Fecha:** [Fecha de entrega]
+> **Por:** Daniel Giraldo, Diego Angarita, Esteban Alvarez, Ismael Garcia
+> **Entrega final:** Introducción a la inteligencia artificial.
+
 
 ## 1. Introducción
 
@@ -32,8 +31,6 @@ Este proyecto no utiliza un conjunto de datos externo tradicional. Los datos se 
 | Fuente | Simulación procedimental del juego definida en el repositorio. |
 | Formato del nivel | Matriz de tiles construida desde mapas ASCII. |
 | Niveles | Dos niveles de 200 columnas y 15 filas. |
-| Observación `grid` | Vector `float32` de 498 valores con sólidos, enemigos y estado de Mario. |
-| Observación `pixels` | Imagen `uint8` de 84 × 84 × 1 en escala de grises. |
 | Acciones | Siete acciones discretas: nada, derecha, saltar, correr y combinaciones. |
 | Variables del estado | Posición, velocidad, contacto con el suelo, enemigos, progreso y estado del episodio. |
 | Recompensa | Avance horizontal, penalización por paso, penalización por muerte y premio por bandera. |
@@ -47,9 +44,7 @@ Durante cada episodio se reinician el tiempo, la posición de Mario, los enemigo
 ### Limitaciones y restricciones
 
 - Los niveles son diseñados por el equipo y no representan la variedad completa de los juegos de plataformas.
-- El entrenamiento depende de la representación elegida: `grid` contiene información estructurada y `pixels` exige que la política aprenda características visuales.
 - Los resultados dependen de la semilla, el número de pasos de entrenamiento y la configuración de aleatoriedad.
-- El proyecto utiliza dependencias de terceros como Python, Pygame, Gymnasium, NumPy, PyTorch y Stable-Baselines3, cuyas licencias deben consultarse en sus respectivos paquetes.
 - Los sprites son pixel-art del proyecto y no se incluyen assets comerciales externos.
 
 ## 4. Metodología
@@ -74,11 +69,9 @@ El trabajo se organiza en cinco etapas:
 
 ### Diagrama de flujo metodológico
 
-**Espacio reservado para insertar la imagen:**
+<img width="1433" height="598" alt="image" src="https://github.com/user-attachments/assets/3f510b63-3351-4c7a-8f64-829c6fb89859" />
 
-> **[INSERTAR AQUÍ: `docs/diagrams/flujo_metodologico.svg`]**
->
-> Descripción sugerida: pipeline desde el diseño de reglas y niveles, pasando por el motor, el entorno Gymnasium y el entrenamiento PPO, hasta la evaluación y los resultados.
+> pipeline desde el diseño de reglas y niveles, pasando por el motor, el entorno Gymnasium y el entrenamiento PPO, hasta la evaluación y los resultados.
 
 ## 5. Diagrama de interacción UML
 
@@ -93,11 +86,9 @@ Los componentes principales son:
 - **Render:** dibuja el estado cuando se solicita una vista.
 - **Usuario:** observa el modo humano o el render de evaluación.
 
-**Espacio reservado para insertar la imagen:**
+<img width="1491" height="858" alt="image" src="https://github.com/user-attachments/assets/ca9c84eb-cd7b-4371-9468-55984b100860" />
 
-> **[INSERTAR AQUÍ: `docs/diagrams/secuencia_interaccion.svg`]**
->
-> Descripción sugerida: secuencia temporal entre agente, entorno, motor, nivel, render y usuario durante un episodio.
+> secuencia temporal entre agente, entorno, motor, nivel, render y usuario durante un episodio.
 
 ## 6. Resultados
 
